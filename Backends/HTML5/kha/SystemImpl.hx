@@ -37,7 +37,7 @@ class SystemImpl {
 	public static var anisotropicFilter: Dynamic;
 	public static var depthTexture: Dynamic;
 	public static var drawBuffers: Dynamic;
-	public static var elementIndexUint: Dynamic;
+	public static var elementIndexUint: Bool = false;
 	@:noCompletion public static var _hasWebAudio: Bool;
 	//public static var graphics(default, null): Graphics;
 	public static var khanvas: CanvasElement;
@@ -301,67 +301,142 @@ class SystemImpl {
 			#end
 		}
 		canvas.style.cursor = "default";
+		
+		#if kha_webgl
+		var test_gl : Bool = false;
+		var test_canvas : Dynamic = Browser.document.getElementById("testcanvas"); //Browser.document.createElement("canvas");
+		if (test_canvas != null)
+		{
+			var test_gl_context : Dynamic = null;
+			try
+			{
+				test_gl_context = test_canvas.getContext("webgl", { alpha: false });
+				test_gl = test_gl_context != null &&
+					test_gl_context.getParameter(GL.MAX_VERTEX_TEXTURE_IMAGE_UNITS) > 0 &&
+					test_gl_context.getParameter(GL.MAX_TEXTURE_IMAGE_UNITS) > 0;
+			}
+			catch (e: Dynamic)
+			{
+				test_gl = false;
+			}
+			
+			try
+			{
+				test_gl_context.getExtension('WEBGL_lose_context').loseContext();
+			}
+			catch (e: Dynamic)
+			{}
+
+			test_gl_context = null;
+			test_canvas.width = 1;
+			test_canvas.height = 1;
+			test_canvas = null;
+		}
+		#end
 
 		var gl: Bool = false;
+		gl2 = false;
 
 		#if kha_webgl
+		if (test_gl)
+		{
 		try {
 			#if kha_webgl2
-			SystemImpl.gl = canvas.getContext("webgl", { alpha: false, antialias: options.samplesPerPixel > 1, stencil: true, preserveDrawingBuffer: true } );
-			#else
 			SystemImpl.gl = canvas.getContext("webgl2", { alpha: false, antialias: options.samplesPerPixel > 1, stencil: true, preserveDrawingBuffer: true } );
+			if (SystemImpl.gl == null)
+				SystemImpl.gl = canvas.getContext("experimental-webgl2", { alpha: false, antialias: options.samplesPerPixel > 1, stencil: true, preserveDrawingBuffer: true } );
+			
+			if (SystemImpl.gl != null)
+			{
+				trace("webgl2 context worked!");
+				gl2 = true;
+			}
+			else
+			{
+				trace("webgl2 context failed, trying webgl");
+				SystemImpl.gl = canvas.getContext("webgl", { alpha: false, antialias: options.samplesPerPixel > 1, stencil: true, preserveDrawingBuffer: true } );
+			}
+			#else
+				trace("webgl2 is forbidden for the project");
+				SystemImpl.gl = canvas.getContext("webgl", { alpha: false, antialias: options.samplesPerPixel > 1, stencil: true, preserveDrawingBuffer: true } );
 			#end
 			SystemImpl.gl.pixelStorei(GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
 
 			halfFloat = {HALF_FLOAT_OES: 0x140B}; // GL_HALF_FLOAT
 			depthTexture = {UNSIGNED_INT_24_8_WEBGL: 0x84FA}; // GL_UNSIGNED_INT_24_8
 			drawBuffers = {COLOR_ATTACHMENT0_WEBGL: GL.COLOR_ATTACHMENT0};
-			elementIndexUint = true;
+			elementIndexUint = (SystemImpl.gl.getExtension("OES_element_index_uint") != null); // true
 			SystemImpl.gl.getExtension("EXT_color_buffer_float");
 			SystemImpl.gl.getExtension("OES_texture_float_linear");
 			SystemImpl.gl.getExtension("OES_texture_half_float_linear");
 			anisotropicFilter = SystemImpl.gl.getExtension("EXT_texture_filter_anisotropic");
 			if (anisotropicFilter == null) anisotropicFilter = SystemImpl.gl.getExtension("WEBKIT_EXT_texture_filter_anisotropic");
 			
-			gl = true;
+			if (SystemImpl.gl.getParameter(GL.MAX_VERTEX_TEXTURE_IMAGE_UNITS) > 0 &&
+				SystemImpl.gl.getParameter(GL.MAX_TEXTURE_IMAGE_UNITS) > 0)
+			{
+				trace("webgl texture units test passed");
+				gl = true;
+				
+				//#if kha_webgl2
+				//gl2 = true;
+				//#else
+				//gl2 = false;
+				//#end
 
-			#if kha_webgl2
-			gl2 = true;
-			#else
-			gl2 = false;
-			#end
-
-			Shaders.init();
+				Shaders.init();
+			}
+			else
+			{
+				trace("webgl texture units test failed");
+				SystemImpl.gl = null;
+			}
 		}
 		catch (e: Dynamic) {
 			trace("Could not initialize WebGL 2, falling back to WebGL.");
 			gl = false;
+			gl2 = false;
 		}
 
 		if (!gl) {
 			try {
 				SystemImpl.gl = canvas.getContext("experimental-webgl", { alpha: false, antialias: options.samplesPerPixel > 1, stencil: true, preserveDrawingBuffer: true } );
-				if (SystemImpl.gl != null) {
-					SystemImpl.gl.pixelStorei(GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
-					SystemImpl.gl.getExtension("OES_texture_float");
-					SystemImpl.gl.getExtension("OES_texture_float_linear");
-					halfFloat = SystemImpl.gl.getExtension("OES_texture_half_float");
-					SystemImpl.gl.getExtension("OES_texture_half_float_linear");
-					depthTexture = SystemImpl.gl.getExtension("WEBGL_depth_texture");
-					SystemImpl.gl.getExtension("EXT_shader_texture_lod");
-					SystemImpl.gl.getExtension("OES_standard_derivatives");
-					anisotropicFilter = SystemImpl.gl.getExtension("EXT_texture_filter_anisotropic");
-					if (anisotropicFilter == null) anisotropicFilter = SystemImpl.gl.getExtension("WEBKIT_EXT_texture_filter_anisotropic");
-					drawBuffers = SystemImpl.gl.getExtension('WEBGL_draw_buffers');
-					elementIndexUint = SystemImpl.gl.getExtension("OES_element_index_uint");
-					gl = true;
-					Shaders.init();
+				if (SystemImpl.gl != null)
+				{
+					if (SystemImpl.gl.getParameter(GL.MAX_VERTEX_TEXTURE_IMAGE_UNITS) > 0 &&
+						SystemImpl.gl.getParameter(GL.MAX_TEXTURE_IMAGE_UNITS) > 0)
+					{
+						trace("webgl texture units test passed");
+						
+						SystemImpl.gl.pixelStorei(GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
+						SystemImpl.gl.getExtension("OES_texture_float");
+						SystemImpl.gl.getExtension("OES_texture_float_linear");
+						halfFloat = SystemImpl.gl.getExtension("OES_texture_half_float");
+						SystemImpl.gl.getExtension("OES_texture_half_float_linear");
+						depthTexture = SystemImpl.gl.getExtension("WEBGL_depth_texture");
+						SystemImpl.gl.getExtension("EXT_shader_texture_lod");
+						SystemImpl.gl.getExtension("OES_standard_derivatives");
+						anisotropicFilter = SystemImpl.gl.getExtension("EXT_texture_filter_anisotropic");
+						if (anisotropicFilter == null) anisotropicFilter = SystemImpl.gl.getExtension("WEBKIT_EXT_texture_filter_anisotropic");
+						drawBuffers = SystemImpl.gl.getExtension('WEBGL_draw_buffers');
+						elementIndexUint = (SystemImpl.gl.getExtension("OES_element_index_uint") != null);
+						gl = true;
+						Shaders.init();
+					}
+					else
+					{
+						trace("webgl texture units test failed");
+						SystemImpl.gl = null;
+						gl = false;
+					}
 				}
 			}
 			catch (e: Dynamic) {
 				trace("Could not initialize WebGL, falling back to Canvas.");
+				gl = false;
 			}
 		}
+		} // test_gl
 		#end
 
 		setCanvas(canvas);
@@ -374,7 +449,9 @@ class SystemImpl {
 			frame.init(new kha.graphics2.Graphics1(frame), new kha.js.graphics4.Graphics2(frame), g4); // new kha.graphics1.Graphics4(frame));
 		}
 		else {
-			var g2 = new CanvasGraphics(canvas.getContext("2d"));
+			var canvas2d = canvas.getContext("2d");
+			trace("canvas 2d = " + canvas2d);
+			var g2 = new CanvasGraphics(canvas2d);
 			frame = new Framebuffer(0, null, g2, null);
 			frame.init(new kha.graphics2.Graphics1(frame), g2, null);
 		}

@@ -57,26 +57,34 @@ class PipelineState extends PipelineStateBase {
 		if (shader.shader != null) return;
 		var s = SystemImpl.gl.createShader(shader.type);
 		var highp = SystemImpl.gl.getShaderPrecisionFormat(GL.FRAGMENT_SHADER, GL.HIGH_FLOAT);
-		var highpSupported = highp.precision != 0;
+		var highpSupported = highp != null && highp.precision != 0;
 		var files: Array<String> = shader.files;
+		var source = null;
 		for (i in 0...files.length) {
 			if (SystemImpl.gl2) {
 				if (files[i].indexOf("-webgl2") >= 0 || files[i].indexOf("runtime-string") >= 0) {
-					SystemImpl.gl.shaderSource(s, shader.sources[i]);
+					source = shader.sources[i]; //SystemImpl.gl.shaderSource(s, shader.sources[i]);
 					break;
 				}
 			}
-			else {
+			else
+			{
 				if (!highpSupported && files[i].indexOf("-relaxed") >= 0) {
-					SystemImpl.gl.shaderSource(s, shader.sources[i]);
+					source = shader.sources[i]; //SystemImpl.gl.shaderSource(s, shader.sources[i]);
 					break;
 				}
 				if (highpSupported && files[i].indexOf("-relaxed") < 0) {
-					SystemImpl.gl.shaderSource(s, shader.sources[i]);
+					source = shader.sources[i]; //SystemImpl.gl.shaderSource(s, shader.sources[i]);
 					break;
 				}
 			}
 		}
+		
+		if (source == null)
+			source = shader.sources[0];
+		//trace("shader source: " + source);
+		
+		SystemImpl.gl.shaderSource(s, source);
 		SystemImpl.gl.compileShader(s);
 		if (!SystemImpl.gl.getShaderParameter(s, GL.COMPILE_STATUS)) {
 			throw "Could not compile shader:\n" + SystemImpl.gl.getShaderInfoLog(s);
