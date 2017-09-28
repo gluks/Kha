@@ -85,7 +85,7 @@ class KravurImage {
 	
 	private function getCharWidth(charIndex: Int): Float {
 		if (charIndex < 32) return 0;
-		if (charIndex - 32 >= chars.length) return 0;
+		if (charIndex - 32 >= chars.length) return chars[48 - 32].xadvance; // return width of char '0' //return 0;
 		return chars[charIndex - 32].xadvance;
 	}
 	
@@ -172,12 +172,12 @@ class Kravur implements Font {
 		return _get(fontSize).getHeight();
 	}
 
-	public function width(fontSize: Int, str: String): Float {
-		return _get(fontSize).stringWidth(str);
+	public function width(fontSize: Int, str: String, glyphs: Array<Int> = null): Float {
+		return _get(fontSize, glyphs).stringWidth(str);
 	}
 
-	public function widthOfCharacters(fontSize: Int, characters: Array<Int>, start: Int, length: Int): Float {
-		return _get(fontSize).charactersWidth(characters, start, length);
+	public function widthOfCharacters(fontSize: Int, characters: Array<Int>, start: Int, length: Int, glyphs: Array<Int> = null): Float {
+		return _get(fontSize, glyphs).charactersWidth(characters, start, length);
 	}
 	
 	public function baseline(fontSize: Int): Float {
