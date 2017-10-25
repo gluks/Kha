@@ -202,11 +202,17 @@ class ImageShaderPainter {
 	}
 	
 	public function setBilinearFilter(bilinear: Bool): Void {
+		if (this.bilinear == bilinear)
+			return;
+		
 		end();
 		this.bilinear = bilinear;
 	}
 	
 	public function setBilinearMipmapFilter(bilinear: Bool): Void {
+		if (this.bilinearMipmaps == bilinear)
+			return;
+		
 		end();
 		this.bilinearMipmaps = bilinear;
 	}
