@@ -13,7 +13,7 @@ import js.Lib;
 using StringTools;
 
 class MobileWebAudioSound extends kha.Sound {
-	public var _buffer: Dynamic;
+	public var _buffer: AudioBuffer; //Dynamic;
 
 	public function new(filename: String, done: kha.Sound -> Void) {
 		super();
@@ -30,7 +30,8 @@ class MobileWebAudioSound extends kha.Sound {
 			uncompressedData = null;
 			MobileWebAudio._context.decodeAudioData(compressedData.getData(),
 				function (buffer) {
-					_buffer = buffer;
+					if (buffer != null)
+						_buffer = cast(buffer);
 					done(this);
 				},
 				function () {
@@ -42,6 +43,23 @@ class MobileWebAudioSound extends kha.Sound {
 	}
 	
 	override public function uncompress(done: Void->Void): Void {
+		if (_buffer != null) {
+			uncompressedData = new Vector<Float>(_buffer.getChannelData(0).length * 2);
+			if (_buffer.numberOfChannels == 1) {
+				for (i in 0..._buffer.getChannelData(0).length) {
+					uncompressedData[i * 2 + 0] = _buffer.getChannelData(0)[i];
+					uncompressedData[i * 2 + 1] = _buffer.getChannelData(0)[i];
+				}
+			}
+			else {
+				for (i in 0..._buffer.getChannelData(0).length) {
+					uncompressedData[i * 2 + 0] = _buffer.getChannelData(0)[i];
+					uncompressedData[i * 2 + 1] = _buffer.getChannelData(1)[i];
+				}
+			}
+			compressedData = null;
+		}
+		
 		done();
 	}
 }

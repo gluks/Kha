@@ -89,4 +89,17 @@ class MobileWebAudioChannel implements kha.audio1.AudioChannel {
 	private function get_finished(): Bool {
 		return stopped;
 	}
+
+	public var playbackRate(get, set): Float;
+
+	private function get_playbackRate(): Float {
+		return source != null ? source.playbackRate.value : 1;
+	}
+
+	private function set_playbackRate(value: Float): Float {
+		if (source == null)
+			return value;
+		
+		return source.playbackRate.value  = value;
+	}
 }

@@ -15,6 +15,9 @@ class Audio {
 	private static var processingNode: ScriptProcessorNode;
 	
 	private static function initContext(): Void {
+		if (_context != null)
+			return;
+		
 		try {
 			_context = new AudioContext();
 			return;
@@ -23,7 +26,7 @@ class Audio {
 			
 		}
 		try {
-			untyped __js__('this._context = new webkitAudioContext();');
+			_context = untyped __js__('new webkitAudioContext();');
 			return;
 		}
 		catch (e: Dynamic) {
